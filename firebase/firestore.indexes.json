@@ -1,0 +1,80 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "actionRecords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "actionRecords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "teacherVerification", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "assessmentResponses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "studentId", "order": "ASCENDING" },
+        { "fieldPath": "assessmentType", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "wasteRecords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "recordDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "electricityRecords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "billingYear", "order": "ASCENDING" },
+        { "fieldPath": "billingMonth", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "waterRecords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "billingYear", "order": "ASCENDING" },
+        { "fieldPath": "billingMonth", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pointTransactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "teacherObservations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "studentId", "order": "ASCENDING" },
+        { "fieldPath": "assessmentPeriod", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
+

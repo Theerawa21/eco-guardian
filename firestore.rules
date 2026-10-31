@@ -1,0 +1,162 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function hasRole(role) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().role == role &&
+        getUserData().active == true;
+    }
+    function isTeacher() { return hasRole('teacher'); }
+    function isAdmin() { return hasRole('admin'); }
+    function isTeacherOrAdmin() { return isTeacher() || isAdmin(); }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isTeacherOrAdmin();
+      allow create: if isOwner(userId) && request.resource.data.uid == request.auth.uid && (request.resource.data.role == 'student' || isAdmin());
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.uid == resource.data.uid);
+      allow delete: if isAdmin();
+    }
+    match /classrooms/{classroomId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isTeacher();
+    }
+    match /missions/{missionId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /missionContents/{contentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /scenarios/{scenarioId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /missionResponses/{responseId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    match /missionProgress/{progressId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    match /questions/{questionId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /assessments/{assessmentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /assessmentResponses/{responseId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    match /behaviorCommitments/{commitmentId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    match /actionPlans/{planId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    match /actionRecords/{recordId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.teacherVerification == 'pending';
+      allow update: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid && resource.data.teacherVerification != 'approved');
+      allow delete: if isAdmin();
+    }
+    match /wasteRecords/{recordId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.generalWasteKg >= 0 && request.resource.data.recyclableWasteKg >= 0 && request.resource.data.organicWasteKg >= 0 && request.resource.data.plasticWasteKg >= 0;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    match /electricityRecords/{recordId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.electricityKwh >= 0;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    match /waterRecords/{recordId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.waterUnits >= 0;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    match /teacherObservations/{observationId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+      allow create, update: if isTeacherOrAdmin();
+      allow delete: if isAdmin();
+    }
+    match /evidence/{evidenceId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    match /badges/{badgeId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /userBadges/{userBadgeId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isTeacherOrAdmin());
+      allow update, delete: if isAdmin();
+    }
+    match /levels/{levelId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /pointTransactions/{txId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && !exists(/databases/$(database)/documents/pointTransactions/$(txId)) && request.resource.data.points > 0 && (request.resource.data.userId == request.auth.uid || isTeacherOrAdmin());
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+    match /followUps/{followUpId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+    match /systemSettings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /familyMissionRecords/{recordId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+  }
+}
+

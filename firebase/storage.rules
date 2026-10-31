@@ -1,0 +1,48 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    function isValidImage() {
+      return request.resource.contentType.matches('image/jpeg') ||
+             request.resource.contentType.matches('image/png') ||
+             request.resource.contentType.matches('image/webp');
+    }
+
+    function isValidSize() {
+      // Limit file size to 5 MB
+      return request.resource.size <= 5 * 1024 * 1024;
+    }
+
+    // Student Evidence Folder: evidence/{uid}/{allPaths=**}
+    match /evidence/{uid}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() &&
+        request.auth.uid == uid &&
+        isValidImage() &&
+        isValidSize();
+    }
+
+    // Profile Avatars Folder: avatars/{uid}/{allPaths=**}
+    match /avatars/{uid}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() &&
+        request.auth.uid == uid &&
+        isValidImage() &&
+        isValidSize();
+    }
+
+    // Mission Media Folder: missions/{allPaths=**}
+    match /missions/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() &&
+        isValidImage() &&
+        isValidSize();
+    }
+  }
+}
+

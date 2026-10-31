@@ -1,0 +1,252 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().role == role &&
+        getUserData().active == true;
+    }
+
+    function isStudent() {
+      return hasRole('student');
+    }
+
+    function isTeacher() {
+      return hasRole('teacher');
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isTeacherOrAdmin() {
+      return isTeacher() || isAdmin();
+    }
+
+    // 1. users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isTeacherOrAdmin();
+      allow create: if isOwner(userId) &&
+        request.resource.data.uid == request.auth.uid &&
+        (request.resource.data.role == 'student' || isAdmin());
+      allow update: if isAdmin() || (
+        isOwner(userId) &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.uid == resource.data.uid
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 2. classrooms collection
+    match /classrooms/{classroomId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    // 3. missions collection
+    match /missions/{missionId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 4. missionContents collection
+    match /missionContents/{contentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 5. scenarios collection
+    match /scenarios/{scenarioId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 6. missionResponses collection
+    match /missionResponses/{responseId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // 7. missionProgress collection
+    match /missionProgress/{progressId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // 8. questions collection (Question Bank)
+    match /questions/{questionId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 9. assessments collection (Definitions)
+    match /assessments/{assessmentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 10. assessmentResponses collection
+    match /assessmentResponses/{responseId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // 11. behaviorCommitments collection
+    match /behaviorCommitments/{commitmentId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // 12. actionPlans collection
+    match /actionPlans/{planId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // 13. actionRecords collection
+    match /actionRecords/{recordId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.teacherVerification == 'pending';
+      allow update: if isTeacherOrAdmin() || (
+        isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        resource.data.teacherVerification != 'approved'
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 14. wasteRecords collection
+    match /wasteRecords/{recordId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid &&
+        request.resource.data.generalWasteKg >= 0 &&
+        request.resource.data.recyclableWasteKg >= 0 &&
+        request.resource.data.organicWasteKg >= 0 &&
+        request.resource.data.plasticWasteKg >= 0;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // 15. electricityRecords collection
+    match /electricityRecords/{recordId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid &&
+        request.resource.data.electricityKwh >= 0;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // 16. waterRecords collection
+    match /waterRecords/{recordId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid &&
+        request.resource.data.waterUnits >= 0;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // 17. teacherObservations collection
+    match /teacherObservations/{observationId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.studentId == request.auth.uid);
+      allow create, update: if isTeacherOrAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 18. evidence collection
+    match /evidence/{evidenceId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // 19. badges collection
+    match /badges/{badgeId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 20. userBadges collection
+    match /userBadges/{userBadgeId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (request.resource.data.userId == request.auth.uid || isTeacherOrAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    // 21. levels collection
+    match /levels/{levelId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 22. pointTransactions collection (Immutable audit log, idempotent key)
+    match /pointTransactions/{txId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        !exists(/databases/$(database)/documents/pointTransactions/$(txId)) &&
+        request.resource.data.points > 0 &&
+        (request.resource.data.userId == request.auth.uid || isTeacherOrAdmin());
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // 23. followUps collection
+    match /followUps/{followUpId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // 24. notifications collection
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    // 25. systemSettings collection
+    match /systemSettings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 26. familyMissionRecords collection
+    match /familyMissionRecords/{recordId} {
+      allow read: if isTeacherOrAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+  }
+}
+
